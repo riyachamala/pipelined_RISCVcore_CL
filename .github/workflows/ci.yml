@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      SIM: verilator
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install simulators
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog verilator
+
+      - name: Cache RISC-V toolchain
+        uses: actions/cache@v4
+        with:
+          path: tools
+          key: xpack-riscv-none-elf-gcc-15.2.0-1-linux-x64
+
+      - name: Install RISC-V toolchain
+        run: scripts/install_toolchain.sh
+
+      - name: Lint
+        run: make lint
+
+      - name: Smoke test (Icarus and Verilator)
+        run: |
+          make smoke SIM=iverilog
+          make smoke SIM=verilator
+
+      - name: riscv-tests (rv32ui, rv32um, rv32mi)
+        run: make riscv-tests
+
+      - name: Architectural tests (riscv-arch-test signatures)
+        run: make arch-test
+
+      - name: C test suite
+        run: make sw-tests
+
+      - name: FreeRTOS
+        run: make freertos
+
+      - name: CoreMark
+        run: make coremark | tee coremark.log
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### CoreMark"
+            echo '```'
+            grep -E "CoreMark/MHz|^\[tb\]" coremark.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

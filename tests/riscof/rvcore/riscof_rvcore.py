@@ -1,6 +1,7 @@
-"""RISCOF DUT plugin for the rv_core pipelined RV32I core."""
+"""RISCOF DUT plugin for the rv_core pipelined RV32IM core."""
 import logging
 import os
+import subprocess
 
 import riscof.utils as utils
 from riscof.pluginTemplate import pluginTemplate
@@ -21,7 +22,11 @@ class rvcore(pluginTemplate):
         self.pluginpath = os.path.abspath(config["pluginpath"])
         self.isa_spec = os.path.abspath(config["ispec"])
         self.platform_spec = os.path.abspath(config["pspec"])
-        self.cross = config.get("cross", "riscv64-unknown-elf-")
+        # Same compiler auto-detection as the rest of the project unless
+        # config.ini names one explicitly.
+        root = os.path.abspath(os.path.join(self.pluginpath, "..", "..", ".."))
+        self.cross = config.get("cross") or subprocess.check_output(
+            [os.path.join(root, "scripts", "find_cross.sh")], text=True).strip()
         self.target_run = config.get("target_run", "1") != "0"
         self.runner = os.path.join(self.pluginpath, "run_test.sh")
         return sclass

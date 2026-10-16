@@ -108,6 +108,7 @@ class Asm:
 
     def write_hex(self, path):
         with open(path, "w") as f:
+            f.write("@0\n")
             for w in self.assemble():
                 f.write("%08x\n" % w)
 

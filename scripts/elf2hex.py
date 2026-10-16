@@ -71,6 +71,9 @@ def main():
             image[addr - args.base:addr - args.base + len(body)] = body
         image += b"\0" * (-len(image) % 4)
         with open(args.hex, "w") as f:
+            # An explicit start address also stops Icarus from warning that
+            # the file is shorter than the memory it initialises.
+            f.write("@0\n")
             for i in range(0, len(image), 4):
                 f.write("%08x\n" % struct.unpack_from("<I", image, i))
 

@@ -4,20 +4,21 @@
 //
 //  * Full forwarding MEM->EX and WB->EX; WB->ID through the register file.
 //  * One-cycle load-use stall.
-//  * Single-cycle multiplier; iterative divider that stalls EX (~33 cycles).
-//  * IF predecode + gshare, return address stack and indirect BTB;
-//    resolution and redirect in EX
-//    (2-cycle mispredict penalty).
-//  * Traps (ecall/ebreak/illegal/timer IRQ), mret and fence.i are handled
-//    in EX, so every older instruction has already left the trap window and
-//    exceptions are precise.
+//  * Single-cycle multiplier; iterative divider that holds EX (~33 cycles).
+//  * Branch prediction in IF (predecode, gshare, return address stack,
+//    indirect BTB). Branches resolve in EX: 2-cycle mispredict penalty.
+//  * All traps (ecall, ebreak, illegal instruction, misaligned load/store/
+//    fetch, timer interrupt), mret and fence.i are taken in EX. Nothing in
+//    MEM or WB can fault, so every trap is precise.
+//
+// See docs/ARCHITECTURE.md for a walkthrough.
 module rv_core #(
-    parameter RESET_PC     = `RESET_PC,
+    parameter RESET_PC         = `RESET_PC,
     parameter BTB_ENTRIES_LOG2 = 5,     // indirect-jump target buffer
     parameter PHT_ENTRIES_LOG2 = 12,    // gshare pattern history table
     parameter GHR_BITS         = 12,    // global branch history length
     parameter RAS_DEPTH_LOG2   = 3,     // return address stack
-    parameter RV32M            = 1     // include the M extension
+    parameter RV32M            = 1      // include the M extension
 ) (
     input  wire        clk,
     input  wire        rst,
@@ -92,8 +93,8 @@ module rv_core #(
             id_valid       <= 1'b1;
             id_pc          <= if_pc;
             id_instr       <= imem_rdata;
-            id_pred_taken  <= if_pred_taken;
-            id_pred_target <= if_pred_target;
+            id_pred_taken   <= if_pred_taken;
+            id_pred_target  <= if_pred_target;
             id_pred_ghr     <= if_pred_ghr;
             id_pred_ras_ptr <= if_pred_ras_ptr;
         end
@@ -221,8 +222,8 @@ module rv_core #(
             ex_is_mret     <= id_is_mret;
             ex_is_fence_i  <= id_is_fence_i;
             ex_illegal     <= id_illegal;
-            ex_pred_taken  <= id_pred_taken;
-            ex_pred_target <= id_pred_target;
+            ex_pred_taken   <= id_pred_taken;
+            ex_pred_target  <= id_pred_target;
             ex_pred_ghr     <= id_pred_ghr;
             ex_pred_ras_ptr <= id_pred_ras_ptr;
         end
@@ -351,8 +352,9 @@ module rv_core #(
     wire ex_do_fence_i = ex_valid && !ex_trap && ex_is_fence_i;
     wire ex_do_csr     = ex_valid && !ex_trap && ex_is_csr;
 
-    // A busy divide can be falsely "predicted taken" by BTB aliasing; defer
-    // that fix-up to its final cycle so the divide is not dropped.
+    // Only control flow is ever predicted taken, so a busy divide never
+    // mispredicts; the !ex_busy term just keeps "hold EX" and "redirect"
+    // mutually exclusive by construction (a trap aborts the divide).
     assign ex_redirect    = ex_trap || ex_do_mret || ex_do_fence_i ||
                             (ex_valid && ex_mispredict && !ex_busy);
     assign ex_redirect_pc = ex_trap       ? ex_trap_vector :
@@ -385,6 +387,7 @@ module rv_core #(
         .mepc_o           (mepc),
         .irq_pending      (irq_pending)
     );
+
     // ---------------------------------------------------------------- branch predictor
     rv_branch_predictor #(
         .BTB_ENTRIES_LOG2 (BTB_ENTRIES_LOG2),

@@ -2,6 +2,7 @@
 #   make ITERATIONS=10
 
 COREMARK_REPO ?= https://github.com/eembc/coremark.git
+COREMARK_TAG  ?= v1.01
 COREMARK_DIR  ?= coremark-src
 ITERATIONS    ?= 10
 
@@ -18,7 +19,7 @@ include ../common/common.mk
 $(SRCS): | $(COREMARK_DIR)
 
 $(COREMARK_DIR):
-	git clone --depth 1 $(COREMARK_REPO) $@
+	git clone --depth 1 --branch $(COREMARK_TAG) $(COREMARK_REPO) $@
 
 distclean: clean
 	rm -rf $(COREMARK_DIR)
