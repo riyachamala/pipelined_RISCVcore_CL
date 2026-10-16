@@ -1,0 +1,8 @@
+build/
+*.vcd
+*.fst
+__pycache__/
+sw/coremark/coremark-src/
+tests/riscof/riscv-arch-test/
+tests/riscof/spike/
+tests/riscof/riscof_work/
