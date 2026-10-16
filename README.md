@@ -28,7 +28,7 @@ RISCOF compliance, and CoreMark.
 | `rtl/rv_mul.v`, `rtl/rv_div.v` | RV32M: single-cycle multiply, 33-cycle iterative divide |
 | `rtl/rv_alu.v`, `rv_branch_unit.v`, `rv_imm_gen.v`, `rv_lsu.v`, `rv_regfile.v` | Datapath blocks |
 | `rtl/rv_soc.v`               | Core + RAM + CLINT + simulation I/O            |
-| `rtl/rv_ram.v`, `rv_clint.v` | 1 MiB unified RAM, `mtime`/`mtimecmp`           |
+| `rtl/rv_ram.v`, `rv_clint.v` | 4 MiB unified RAM, `mtime`/`mtimecmp`           |
 | `tb/tb_top.v`                | Testbench (Icarus and Verilator)                |
 
 ### Memory map
@@ -48,7 +48,8 @@ RISCOF compliance, and CoreMark.
   downloads a prebuilt xPack `riscv-none-elf-gcc` into `./tools`, and the build
   finds it automatically. Any `riscv64-unknown-elf-` or similar compiler on `PATH`
   also works; force one with `CROSS=<prefix>`.
-- For RISCOF: `pip install riscof` and `spike` on `PATH`
+- For the RISCOF flow: `pip install riscof` and `spike` on `PATH`. `make arch-test`
+  needs neither; it checks against reference signatures stored in the suite.
 
 ## Usage
 
@@ -66,7 +67,8 @@ make riscv-tests              # rv32ui/um/mi -p- tests from the official repo
 SUITES=rv32ui make riscv-tests
 make coremark SIM=verilator   # CoreMark (ITERATIONS=10 by default)
 
-cd tests/riscof && make setup && make   # RISCOF architectural tests
+make arch-test                # riscv-arch-test vs golden reference signatures
+cd tests/riscof && make setup && make   # RISCOF flow (needs spike)
 ```
 
 Testbench plusargs (see the header of `tb/tb_top.v`): `+hex=`, `+max_cycles=`,
@@ -126,10 +128,16 @@ end of every run.
 - [x] Compiled C runs (`make hello`)
 - [x] Self-checking C tests: RV32M against software references, timer
   interrupts mid-workload (including mid-divide), recursion and jump tables
-- [ ] RISCOF `rv32i_m/I` passing
+- [x] Architectural compliance (riscv-arch-test 2.7.4 golden signatures):
+  I 38/38, M 8/8, Zifencei 1/1, privilege 5/5 applicable
 - [x] CoreMark: 3.26 CoreMark/MHz (see Performance)
 - [ ] FreeRTOS boot (see `sw/freertos/README.md`)
 - [ ] Synchronous BRAM fetch path for FPGA (RAM reads are combinational now)
 
 Known simplifications: misaligned accesses trap rather than being handled in
 hardware, and unimplemented CSRs read as zero and ignore writes.
+
+Eleven privilege `misalign-*` arch tests are skipped. Their 2.7.4 reference
+signatures come from a platform with the C extension and hardware misaligned
+loads, both of which change the expected trap behaviour. This core's trapping
+behaviour is checked by riscv-tests `rv32mi` instead.

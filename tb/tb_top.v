@@ -14,7 +14,7 @@
 //   +trace               print every retired instruction
 //   +vcd                 dump waves to tb_top.vcd
 module tb_top;
-    localparam RAM_BYTES = 1024 * 1024;
+    localparam RAM_BYTES = 4 * 1024 * 1024;
     localparam [31:0] RAM_BASE = 32'h8000_0000;
 
     reg clk = 1'b0;

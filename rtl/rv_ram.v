@@ -3,7 +3,7 @@
 // simulation (maps to distributed RAM on FPGA for small sizes; swap for a
 // synchronous BRAM + fetch-stage register when targeting real hardware).
 module rv_ram #(
-    parameter SIZE_BYTES = 1024 * 1024
+    parameter SIZE_BYTES = 4 * 1024 * 1024
 ) (
     input  wire        clk,
 

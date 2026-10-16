@@ -1,10 +1,10 @@
-/* Linker script for bare-metal programs on rv_soc (1 MiB RAM @ 0x80000000). */
+/* Linker script for bare-metal programs on rv_soc (4 MiB RAM @ 0x80000000). */
 OUTPUT_ARCH("riscv")
 ENTRY(_start)
 
 MEMORY
 {
-    RAM (rwx) : ORIGIN = 0x80000000, LENGTH = 1M
+    RAM (rwx) : ORIGIN = 0x80000000, LENGTH = 4M
 }
 
 SECTIONS

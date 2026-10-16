@@ -5,9 +5,10 @@
 #   make run ELF=prog.elf        run any ELF on the SoC
 #   make hello                   build + run sw/hello (needs riscv gcc)
 #   make sw-tests                self-checking C tests (sw/tests)
-#   make test                    smoke + riscv-tests + sw-tests
+#   make test                    smoke + riscv-tests + arch-test + sw-tests
 #   make riscv-tests             official riscv-tests (rv32ui-p-*)
-#   make riscof                  RISCOF architectural compliance
+#   make arch-test               riscv-arch-test vs golden reference signatures
+#   make riscof                  RISCOF architectural compliance (needs spike)
 #   make coremark                build + run CoreMark
 #
 #   SIM=iverilog (default) | verilator     -- choose simulator
@@ -43,7 +44,7 @@ endif
 
 export SIM SIM_RUN PYTHON BUILD
 
-.PHONY: all sim lint smoke run hello sw-tests test coremark riscv-tests riscof clean
+.PHONY: all sim lint smoke run hello sw-tests test coremark riscv-tests arch-test riscof clean
 
 all: smoke
 
@@ -78,7 +79,7 @@ hello: $(SIM_BIN)
 sw-tests: $(SIM_BIN)
 	$(MAKE) -C sw/tests run
 
-test: smoke riscv-tests sw-tests
+test: smoke riscv-tests arch-test sw-tests
 
 coremark: $(SIM_BIN)
 	$(MAKE) -C sw/coremark
@@ -86,6 +87,9 @@ coremark: $(SIM_BIN)
 
 riscv-tests: $(SIM_BIN)
 	tests/riscv-tests/run.sh
+
+arch-test: $(SIM_BIN)
+	tests/arch-test/run.sh
 
 riscof: $(SIM_BIN)
 	$(MAKE) -C tests/riscof

@@ -7,9 +7,9 @@
 //   0x1000_0000                 UART TX data   (write: byte to console)
 //   0x1000_0004                 UART status    (read: bit0 = tx ready)
 //   0x1000_0008                 SIM exit       (write: exit code, ends sim)
-//   0x8000_0000 - +RAM_BYTES    RAM (code + data), reset vector at base
+//   0x8000_0000 - +RAM_BYTES    RAM (code + data, 4 MiB), reset vector at base
 module rv_soc #(
-    parameter RAM_BYTES = 1024 * 1024
+    parameter RAM_BYTES = 4 * 1024 * 1024
 ) (
     input  wire        clk,
     input  wire        rst,
