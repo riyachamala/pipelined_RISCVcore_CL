@@ -2,7 +2,9 @@
 
 // Machine-mode CSR file (Zicsr) with trap entry/exit and a timer interrupt.
 // Unimplemented CSRs read as zero and ignore writes.
-module rv_csr (
+module rv_csr #(
+    parameter MISA = 32'h4000_0100       // RV32I
+) (
     input  wire        clk,
     input  wire        rst,
 
@@ -41,7 +43,6 @@ module rv_csr (
     reg [63:0] minstret;
 
     wire [31:0] mstatus = {19'd0, 2'b11, 3'd0, mstatus_mpie, 3'd0, mstatus_mie, 3'd0}; // MPP = M
-    wire [31:0] misa    = 32'h4000_0100;                                         // RV32I
     wire [31:0] mie_r   = {24'd0, mie_mtie, 7'd0};
     wire [31:0] mip_r   = {24'd0, timer_irq, 7'd0};
 
@@ -53,7 +54,7 @@ module rv_csr (
     always @(*) begin
         case (csr_addr)
             `CSR_MSTATUS:   csr_rdata = mstatus;
-            `CSR_MISA:      csr_rdata = misa;
+            `CSR_MISA:      csr_rdata = MISA;
             `CSR_MIE:       csr_rdata = mie_r;
             `CSR_MTVEC:     csr_rdata = mtvec;
             `CSR_MSCRATCH:  csr_rdata = mscratch;

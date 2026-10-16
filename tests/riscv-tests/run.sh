@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build and run the official riscv-tests ISA suites on the simulated core.
 #
-#   tests/riscv-tests/run.sh                 # rv32ui-p-* and rv32mi-p-*
+#   tests/riscv-tests/run.sh                 # rv32ui, rv32um and rv32mi (-p- env)
 #   SUITES=rv32ui tests/riscv-tests/run.sh
 #   tests/riscv-tests/run.sh add lw          # selected tests only
 #
@@ -10,7 +10,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CROSS="$("$ROOT/scripts/find_cross.sh")" || exit 1
-SUITES="${SUITES:-rv32ui rv32mi}"
+SUITES="${SUITES:-rv32ui rv32um rv32mi}"
 RT_DIR="${RISCV_TESTS_DIR:-$ROOT/build/riscv-tests/src}"
 OUT="$ROOT/build/riscv-tests"
 
@@ -35,7 +35,7 @@ for suite in $SUITES; do
         if [[ " $SKIP " =~ " $name " ]]; then continue; fi
 
         elf="$OUT/$suite-p-$name.elf"
-        if ! "${CROSS}gcc" -march=rv32i_zicsr_zifencei -mabi=ilp32 -static -mcmodel=medany \
+        if ! "${CROSS}gcc" -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -mcmodel=medany \
                 -fvisibility=hidden -nostdlib -nostartfiles \
                 -I"$RT_DIR/env/p" -I"$RT_DIR/isa/macros/scalar" \
                 -T"$RT_DIR/env/p/link.ld" "$src" -o "$elf"; then

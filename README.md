@@ -1,6 +1,6 @@
-# Pipelined RV32I Core
+# Pipelined RV32IM Core
 
-A 5-stage in-order RISC-V core (RV32I + Zicsr + Zifencei, M-mode only) with
+A 5-stage in-order RISC-V core (RV32IM + Zicsr + Zifencei, M-mode only) with
 hazard detection, full forwarding, and dynamic branch prediction. It also
 includes the infrastructure to run compiled C, the official riscv-tests,
 RISCOF compliance, and CoreMark.
@@ -13,6 +13,7 @@ RISCOF compliance, and CoreMark.
  │      │      │ └─fwd─┴───────┘   MEM→EX, WB→EX forwarding; WB→ID via regfile bypass
  │      └─stall┘                   1-cycle load-use stall
  └◄──── redirect ┘                 mispredict / trap / mret / fence.i resolved in EX
+                                   divide holds IF/ID/EX until its result is ready
  BTB+2-bit predictor (IF lookup, EX update)
 ```
 
@@ -24,6 +25,7 @@ RISCOF compliance, and CoreMark.
 | `rtl/rv_forward_unit.v`      | EX operand forwarding                           |
 | `rtl/rv_branch_predictor.v`  | 64-entry BTB with 2-bit saturating counters     |
 | `rtl/rv_csr.v`               | M-mode CSRs, counters, trap entry/`mret`, timer IRQ |
+| `rtl/rv_mul.v`, `rtl/rv_div.v` | RV32M: single-cycle multiply, 33-cycle iterative divide |
 | `rtl/rv_alu.v`, `rv_branch_unit.v`, `rv_imm_gen.v`, `rv_lsu.v`, `rv_regfile.v` | Datapath blocks |
 | `rtl/rv_soc.v`               | Core + RAM + CLINT + simulation I/O            |
 | `rtl/rv_ram.v`, `rv_clint.v` | 1 MiB unified RAM, `mtime`/`mtimecmp`           |
@@ -58,7 +60,7 @@ make lint                     # Verilator lint
 
 make hello                    # C hello world + fib, prints cycles/instret
 make run ELF=path/to/prog.elf # any bare-metal ELF linked at 0x80000000
-make riscv-tests              # rv32ui-p-* and rv32mi-p-* from the official repo
+make riscv-tests              # rv32ui/um/mi -p- tests from the official repo
 SUITES=rv32ui make riscv-tests
 make coremark SIM=verilator   # CoreMark (ITERATIONS=10 by default)
 
@@ -87,12 +89,12 @@ CoreMark/MHz = `Iterations × 10⁶ / Total ticks` (the port prints it ×1000).
 - [x] Zicsr, `ecall`/`ebreak`/illegal traps, `mret`, timer interrupt, `fence.i`
 - [x] Precise misaligned load/store/fetch exceptions with `mtval`
 - [x] Directed smoke test passes on Icarus and Verilator
-- [x] riscv-tests: `rv32ui-p-*` 41/41 and `rv32mi-p-*` 10/10 passing
+- [x] RV32M multiply/divide
+- [x] riscv-tests: `rv32ui-p-*` 41/41, `rv32um-p-*` 8/8, `rv32mi-p-*` 15/15 passing
   (only `ma_data` and `pmpaddr` are skipped; they need optional features)
 - [x] Compiled C runs (`make hello`)
 - [ ] RISCOF `rv32i_m/I` passing
 - [ ] CoreMark score
-- [ ] RV32M (hook marked `TODO(RV32M)` in `rtl/rv_decoder.v`)
 - [ ] FreeRTOS boot (see `sw/freertos/README.md`)
 - [ ] Synchronous BRAM fetch path for FPGA (RAM reads are combinational now)
 

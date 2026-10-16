@@ -1,7 +1,9 @@
 `include "rv_defines.vh"
 
 // Main instruction decoder (ID stage). Pure combinational.
-module rv_decoder (
+module rv_decoder #(
+    parameter RV32M = 1
+) (
     input  wire [31:0] instr,
 
     output wire [4:0]  rs1,
@@ -24,6 +26,9 @@ module rv_decoder (
     output reg         is_branch,
     output reg         is_jal,
     output reg         is_jalr,
+
+    output reg         is_mul,
+    output reg         is_div,
 
     output reg         is_csr,
     output reg         is_ecall,
@@ -54,6 +59,8 @@ module rv_decoder (
         is_branch  = 1'b0;
         is_jal     = 1'b0;
         is_jalr    = 1'b0;
+        is_mul     = 1'b0;
+        is_div     = 1'b0;
         is_csr     = 1'b0;
         is_ecall   = 1'b0;
         is_ebreak  = 1'b0;
@@ -142,7 +149,6 @@ module rv_decoder (
                 reg_write = 1'b1;
                 uses_rs1  = 1'b1;
                 uses_rs2  = 1'b1;
-                // TODO(RV32M): funct7 == 7'b0000001 selects MUL/DIV.
                 case (funct3)
                     3'b000: alu_op = funct7[5] ? `ALU_SUB : `ALU_ADD;
                     3'b001: alu_op = `ALU_SLL;
@@ -153,7 +159,10 @@ module rv_decoder (
                     3'b110: alu_op = `ALU_OR;
                     3'b111: alu_op = `ALU_AND;
                 endcase
-                if (funct7 == 7'b0100000)
+                if (funct7 == 7'b0000001 && RV32M) begin
+                    is_mul = ~funct3[2];        // MUL, MULH, MULHSU, MULHU
+                    is_div =  funct3[2];        // DIV, DIVU, REM, REMU
+                end else if (funct7 == 7'b0100000)
                     illegal = (funct3 != 3'b000) && (funct3 != 3'b101);
                 else
                     illegal = (funct7 != 7'b0000000);

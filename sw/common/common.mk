@@ -5,7 +5,7 @@
 #     SRCS := main.c
 #     include ../common/common.mk
 
-ARCH    ?= rv32i_zicsr_zifencei
+ARCH    ?= rv32im_zicsr_zifencei
 ABI     ?= ilp32
 OPT     ?= -O2
 

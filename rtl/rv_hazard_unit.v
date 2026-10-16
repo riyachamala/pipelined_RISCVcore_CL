@@ -1,4 +1,5 @@
-// Hazard detection: load-use stall and control-flow flushes.
+// Hazard detection: load-use stall, multi-cycle EX stall, and control-flow
+// flushes.
 //
 // Control-flow changes (mispredict, trap, mret, fence.i) are resolved in EX,
 // so a redirect squashes the two younger instructions in IF/ID and ID/EX.
@@ -14,9 +15,11 @@ module rv_hazard_unit (
     input  wire       ex_mem_read,
     input  wire [4:0] ex_rd,
     input  wire       ex_redirect,
+    input  wire       ex_busy,    // multi-cycle op (divide) still running
 
     output wire       stall_if,
     output wire       stall_id,
+    output wire       stall_ex,   // hold ID/EX register
     output wire       flush_id,   // squash IF/ID register
     output wire       flush_ex    // insert bubble into ID/EX register
 );
@@ -24,8 +27,11 @@ module rv_hazard_unit (
                     ((id_uses_rs1 && id_rs1 == ex_rd) ||
                      (id_uses_rs2 && id_rs2 == ex_rd));
 
-    assign stall_if = load_use && !ex_redirect;
-    assign stall_id = load_use && !ex_redirect;
+    // A busy EX never redirects (see rv_core), so redirect and ex_busy are
+    // mutually exclusive except for a trap, which aborts the busy op.
+    assign stall_if = (load_use || ex_busy) && !ex_redirect;
+    assign stall_id = (load_use || ex_busy) && !ex_redirect;
+    assign stall_ex = ex_busy && !ex_redirect;
     assign flush_id = ex_redirect;
-    assign flush_ex = ex_redirect || load_use;
+    assign flush_ex = ex_redirect || (load_use && !ex_busy);
 endmodule
