@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build and run the official riscv-tests ISA suites on the simulated core.
 #
-#   tests/riscv-tests/run.sh                 # rv32ui-p-*
-#   SUITES="rv32ui rv32mi" tests/riscv-tests/run.sh
+#   tests/riscv-tests/run.sh                 # rv32ui-p-* and rv32mi-p-*
+#   SUITES=rv32ui tests/riscv-tests/run.sh
 #   tests/riscv-tests/run.sh add lw          # selected tests only
 #
 # Env: CROSS (auto-detected by scripts/find_cross.sh), SIM, RISCV_TESTS_DIR
@@ -10,13 +10,15 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CROSS="$("$ROOT/scripts/find_cross.sh")" || exit 1
-SUITES="${SUITES:-rv32ui}"
+SUITES="${SUITES:-rv32ui rv32mi}"
 RT_DIR="${RISCV_TESTS_DIR:-$ROOT/build/riscv-tests/src}"
 OUT="$ROOT/build/riscv-tests"
 
-# Tests that need features this core intentionally lacks
-# (misaligned access support, S/U modes, etc.).
-SKIP="${SKIP:-ma_data ma_fetch ma_addr breakpoint instret_overflow pmpaddr zicntr}"
+# Tests for optional features this core does not implement:
+#   ma_data  - requires hardware support for misaligned loads/stores
+#              (the core traps instead, which ma_addr/*-misaligned verify)
+#   pmpaddr  - requires physical memory protection
+SKIP="${SKIP:-ma_data pmpaddr}"
 
 if [ ! -d "$RT_DIR/isa" ]; then
     echo "Cloning riscv-tests into $RT_DIR"

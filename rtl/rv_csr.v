@@ -22,7 +22,7 @@ module rv_csr (
     input  wire        mret,
 
     // Status
-    input  wire        instret_inc,
+    input  wire        instret_inc,   // an instruction retires this cycle
     input  wire [63:0] mtime,
     input  wire        timer_irq,
     output wire [31:0] mtvec_o,
@@ -88,6 +88,11 @@ module rv_csr (
     // CSRRS/CSRRC with rs1 = x0 (or zimm = 0) must not write.
     wire csr_we = csr_en && (csr_funct3[1:0] == 2'b01 || !csr_operand_zero);
 
+    // An explicit write to minstret(h) suppresses that instruction's own
+    // increment, so the next instruction reads exactly the written value.
+    wire instret_wr  = csr_we && (csr_addr == `CSR_MINSTRET || csr_addr == `CSR_MINSTRETH);
+    wire instret_cnt = instret_inc && !instret_wr;
+
     always @(posedge clk) begin
         if (rst) begin
             mstatus_mie  <= 1'b0;
@@ -102,7 +107,7 @@ module rv_csr (
             minstret     <= 64'd0;
         end else begin
             mcycle   <= mcycle + 64'd1;
-            if (instret_inc)
+            if (instret_cnt)
                 minstret <= minstret + 64'd1;
 
             if (trap_take) begin

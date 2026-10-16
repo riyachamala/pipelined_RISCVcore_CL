@@ -74,9 +74,12 @@
 `define CSR_MHARTID   12'hF14
 
 // ---------------------------------------------------------------- trap causes
-`define CAUSE_ILLEGAL_INSTR 32'd2
-`define CAUSE_BREAKPOINT    32'd3
-`define CAUSE_ECALL_M       32'd11
+`define CAUSE_FETCH_MISALIGNED 32'd0
+`define CAUSE_ILLEGAL_INSTR    32'd2
+`define CAUSE_BREAKPOINT       32'd3
+`define CAUSE_LOAD_MISALIGNED  32'd4
+`define CAUSE_STORE_MISALIGNED 32'd6
+`define CAUSE_ECALL_M          32'd11
 `define CAUSE_M_TIMER_IRQ   32'h8000_0007
 
 // ---------------------------------------------------------------- memory map

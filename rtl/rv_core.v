@@ -270,16 +270,32 @@ module rv_core #(
     wire [31:0] csr_rdata, mtvec, mepc;
     wire        irq_pending;
 
+    // Misaligned accesses trap (no hardware misaligned support). The
+    // effective address is the ALU result for loads and stores.
+    wire        ex_half_mis   = (ex_funct3[1:0] == 2'b01) && alu_y[0];
+    wire        ex_word_mis   = (ex_funct3[1:0] == 2'b10) && (alu_y[1:0] != 2'b00);
+    wire        ex_ld_mis     = ex_mem_read  && (ex_half_mis || ex_word_mis);
+    wire        ex_st_mis     = ex_mem_write && (ex_half_mis || ex_word_mis);
+    // Taken jump/branch to a non-word-aligned target (no C extension).
+    wire        ex_fetch_mis  = ex_taken && (ex_target[1:0] != 2'b00);
+
     wire        ex_take_irq  = ex_valid && irq_pending;
     wire        ex_take_exc  = ex_valid && !irq_pending &&
-                               (ex_illegal || ex_is_ecall || ex_is_ebreak);
+                               (ex_illegal || ex_is_ecall || ex_is_ebreak ||
+                                ex_ld_mis || ex_st_mis || ex_fetch_mis);
     wire        ex_trap      = ex_take_irq || ex_take_exc;
-    wire [31:0] ex_trap_cause = ex_take_irq  ? `CAUSE_M_TIMER_IRQ   :
-                                ex_illegal   ? `CAUSE_ILLEGAL_INSTR :
-                                ex_is_ebreak ? `CAUSE_BREAKPOINT    :
-                                               `CAUSE_ECALL_M;
-    wire [31:0] ex_trap_val   = ex_illegal ? ex_instr :
-                                ex_is_ebreak ? ex_pc : 32'd0;
+    wire [31:0] ex_trap_cause = ex_take_irq  ? `CAUSE_M_TIMER_IRQ        :
+                                ex_illegal   ? `CAUSE_ILLEGAL_INSTR      :
+                                ex_is_ebreak ? `CAUSE_BREAKPOINT         :
+                                ex_is_ecall  ? `CAUSE_ECALL_M            :
+                                ex_ld_mis    ? `CAUSE_LOAD_MISALIGNED    :
+                                ex_st_mis    ? `CAUSE_STORE_MISALIGNED   :
+                                               `CAUSE_FETCH_MISALIGNED;
+    wire [31:0] ex_trap_val   = ex_take_irq               ? 32'd0     :
+                                ex_illegal                ? ex_instr  :
+                                ex_is_ebreak              ? ex_pc     :
+                                (ex_ld_mis || ex_st_mis)  ? alu_y     :
+                                ex_fetch_mis              ? ex_target : 32'd0;
     wire [31:0] ex_trap_vector = (mtvec[0] && ex_take_irq)
                                ? {mtvec[31:2], 2'b00} + {ex_trap_cause[29:0], 2'b00}
                                : {mtvec[31:2], 2'b00};
@@ -312,7 +328,8 @@ module rv_core #(
         .trap_pc          (ex_pc),
         .trap_val         (ex_trap_val),
         .mret             (ex_do_mret),
-        .instret_inc      (retire_valid),
+        // Count at EX: nothing past EX can trap, so leaving EX means retiring.
+        .instret_inc      (ex_valid && !ex_trap),
         .mtime            (mtime),
         .timer_irq        (timer_irq),
         .mtvec_o          (mtvec),

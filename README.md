@@ -58,8 +58,8 @@ make lint                     # Verilator lint
 
 make hello                    # C hello world + fib, prints cycles/instret
 make run ELF=path/to/prog.elf # any bare-metal ELF linked at 0x80000000
-make riscv-tests              # rv32ui-p-* from the official riscv-tests repo
-SUITES="rv32ui rv32mi" make riscv-tests
+make riscv-tests              # rv32ui-p-* and rv32mi-p-* from the official repo
+SUITES=rv32ui make riscv-tests
 make coremark SIM=verilator   # CoreMark (ITERATIONS=10 by default)
 
 cd tests/riscof && make setup && make   # RISCOF architectural tests
@@ -85,8 +85,10 @@ CoreMark/MHz = `Iterations × 10⁶ / Total ticks` (the port prints it ×1000).
 
 - [x] RV32I pipeline: forwarding, load-use stall, BTB/2-bit prediction
 - [x] Zicsr, `ecall`/`ebreak`/illegal traps, `mret`, timer interrupt, `fence.i`
+- [x] Precise misaligned load/store/fetch exceptions with `mtval`
 - [x] Directed smoke test passes on Icarus and Verilator
-- [x] riscv-tests `rv32ui-p-*`: 41/41 passing
+- [x] riscv-tests: `rv32ui-p-*` 41/41 and `rv32mi-p-*` 10/10 passing
+  (only `ma_data` and `pmpaddr` are skipped; they need optional features)
 - [x] Compiled C runs (`make hello`)
 - [ ] RISCOF `rv32i_m/I` passing
 - [ ] CoreMark score
@@ -94,5 +96,5 @@ CoreMark/MHz = `Iterations × 10⁶ / Total ticks` (the port prints it ×1000).
 - [ ] FreeRTOS boot (see `sw/freertos/README.md`)
 - [ ] Synchronous BRAM fetch path for FPGA (RAM reads are combinational now)
 
-Known simplifications: misaligned loads and stores are not trapped, and
-unimplemented CSRs read as zero and ignore writes.
+Known simplifications: misaligned accesses trap rather than being handled in
+hardware, and unimplemented CSRs read as zero and ignore writes.
