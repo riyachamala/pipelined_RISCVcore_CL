@@ -5,14 +5,18 @@
 //  * Full forwarding MEM->EX and WB->EX; WB->ID through the register file.
 //  * One-cycle load-use stall.
 //  * Single-cycle multiplier; iterative divider that stalls EX (~33 cycles).
-//  * BTB + 2-bit counter prediction in IF; resolution and redirect in EX
+//  * IF predecode + gshare, return address stack and indirect BTB;
+//    resolution and redirect in EX
 //    (2-cycle mispredict penalty).
 //  * Traps (ecall/ebreak/illegal/timer IRQ), mret and fence.i are handled
 //    in EX, so every older instruction has already left the trap window and
 //    exceptions are precise.
 module rv_core #(
     parameter RESET_PC     = `RESET_PC,
-    parameter BTB_ENTRIES_LOG2 = 6,
+    parameter BTB_ENTRIES_LOG2 = 5,     // indirect-jump target buffer
+    parameter PHT_ENTRIES_LOG2 = 12,    // gshare pattern history table
+    parameter GHR_BITS         = 12,    // global branch history length
+    parameter RAS_DEPTH_LOG2   = 3,     // return address stack
     parameter RV32M            = 1     // include the M extension
 ) (
     input  wire        clk,
@@ -56,6 +60,8 @@ module rv_core #(
     reg  [31:0] if_pc;
     wire        if_pred_taken;
     wire [31:0] if_pred_target;
+    wire [GHR_BITS-1:0]       if_pred_ghr;
+    wire [RAS_DEPTH_LOG2-1:0] if_pred_ras_ptr;
 
     assign imem_addr = if_pc;
 
@@ -75,6 +81,8 @@ module rv_core #(
     reg [31:0] id_instr;
     reg        id_pred_taken;
     reg [31:0] id_pred_target;
+    reg [GHR_BITS-1:0]       id_pred_ghr;
+    reg [RAS_DEPTH_LOG2-1:0] id_pred_ras_ptr;
 
     always @(posedge clk) begin
         if (rst || flush_id) begin
@@ -86,6 +94,8 @@ module rv_core #(
             id_instr       <= imem_rdata;
             id_pred_taken  <= if_pred_taken;
             id_pred_target <= if_pred_target;
+            id_pred_ghr     <= if_pred_ghr;
+            id_pred_ras_ptr <= if_pred_ras_ptr;
         end
     end
 
@@ -172,6 +182,8 @@ module rv_core #(
     reg        ex_illegal;
     reg        ex_pred_taken;
     reg [31:0] ex_pred_target;
+    reg [GHR_BITS-1:0]       ex_pred_ghr;
+    reg [RAS_DEPTH_LOG2-1:0] ex_pred_ras_ptr;
 
     always @(posedge clk) begin
         if (rst || flush_ex) begin
@@ -211,6 +223,8 @@ module rv_core #(
             ex_illegal     <= id_illegal;
             ex_pred_taken  <= id_pred_taken;
             ex_pred_target <= id_pred_target;
+            ex_pred_ghr     <= id_pred_ghr;
+            ex_pred_ras_ptr <= id_pred_ras_ptr;
         end
     end
 
@@ -372,16 +386,30 @@ module rv_core #(
         .irq_pending      (irq_pending)
     );
     // ---------------------------------------------------------------- branch predictor
-    rv_branch_predictor #(.ENTRIES_LOG2(BTB_ENTRIES_LOG2)) u_bp (
-        .clk         (clk),
-        .rst         (rst),
-        .if_pc       (if_pc),
-        .pred_taken  (if_pred_taken),
-        .pred_target (if_pred_target),
-        .upd_valid   (ex_valid && ex_is_cf && !ex_trap),
-        .upd_pc      (ex_pc),
-        .upd_taken   (ex_taken),
-        .upd_target  (ex_target)
+    rv_branch_predictor #(
+        .BTB_ENTRIES_LOG2 (BTB_ENTRIES_LOG2),
+        .PHT_ENTRIES_LOG2 (PHT_ENTRIES_LOG2),
+        .GHR_BITS         (GHR_BITS),
+        .RAS_DEPTH_LOG2   (RAS_DEPTH_LOG2)
+    ) u_bp (
+        .clk          (clk),
+        .rst          (rst),
+        .if_pc        (if_pc),
+        .if_instr     (imem_rdata),
+        .if_advance   (!stall_if && !ex_redirect),
+        .pred_taken   (if_pred_taken),
+        .pred_target  (if_pred_target),
+        .pred_ghr     (if_pred_ghr),
+        .pred_ras_ptr (if_pred_ras_ptr),
+        .ex_redirect  (ex_redirect),
+        .ex_executed  (!ex_trap),
+        .ex_pc        (ex_pc),
+        .ex_instr     (ex_instr),
+        .ex_taken     (ex_taken),
+        .ex_ghr       (ex_pred_ghr),
+        .ex_ras_ptr   (ex_pred_ras_ptr),
+        .upd_valid    (ex_valid && ex_is_cf && !ex_trap),
+        .upd_target   (ex_target)
     );
 
     // ---------------------------------------------------------------- hazards

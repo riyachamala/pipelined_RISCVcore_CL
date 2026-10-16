@@ -14,7 +14,7 @@ RISCOF compliance, and CoreMark.
  │      └─stall┘                   1-cycle load-use stall
  └◄──── redirect ┘                 mispredict / trap / mret / fence.i resolved in EX
                                    divide holds IF/ID/EX until its result is ready
- BTB+2-bit predictor (IF lookup, EX update)
+ Branch predictor in IF: predecode + gshare + return stack + indirect BTB
 ```
 
 | File                         | Purpose                                         |
@@ -23,7 +23,7 @@ RISCOF compliance, and CoreMark.
 | `rtl/rv_decoder.v`           | Instruction decode / control signals            |
 | `rtl/rv_hazard_unit.v`       | Load-use stall, flush on redirect               |
 | `rtl/rv_forward_unit.v`      | EX operand forwarding                           |
-| `rtl/rv_branch_predictor.v`  | 64-entry BTB with 2-bit saturating counters     |
+| `rtl/rv_branch_predictor.v`  | IF predecode, gshare (4K × 2-bit, 12-bit history), 8-entry RAS, 32-entry indirect BTB |
 | `rtl/rv_csr.v`               | M-mode CSRs, counters, trap entry/`mret`, timer IRQ |
 | `rtl/rv_mul.v`, `rtl/rv_div.v` | RV32M: single-cycle multiply, 33-cycle iterative divide |
 | `rtl/rv_alu.v`, `rv_branch_unit.v`, `rv_imm_gen.v`, `rv_lsu.v`, `rv_regfile.v` | Datapath blocks |
@@ -85,9 +85,38 @@ include ../common/common.mk
 
 CoreMark/MHz = `Iterations × 10⁶ / Total ticks` (the port prints it ×1000).
 
+## Performance
+
+CoreMark 1.0, 2K performance run, 10 iterations, GCC 15.2 `-O2 -funroll-loops`,
+`-march=rv32im_zicsr_zifencei`. All CRCs match EEMBC's reference values.
+
+| Metric                         | Value          |
+|--------------------------------|----------------|
+| **CoreMark/MHz**               | **3.26**       |
+| CPI                            | 1.096          |
+| Branch/jump mispredict rate    | 5.4 % (30.8K of 574K) |
+| Load-use stall cycles          | 211K (6.8 % of cycles) |
+
+Predictor development on the same workload:
+
+| Predictor                                     | Mispredicts | CoreMark/MHz |
+|-----------------------------------------------|-------------|--------------|
+| 64-entry BTB + 2-bit counters                 | 56.7K       | 3.20         |
+| + gshare, history updated at EX               | 55.1K       | 3.21         |
+| IF predecode + speculative gshare (1K) + RAS  | 38.9K       | 3.24         |
+| PHT 4K entries, 12-bit history (current)      | 30.8K       | 3.26         |
+
+CoreMark prints `Errors detected` only because a run must last 10 seconds to
+be reportable, and simulated runs are a few million cycles. The figure of merit
+for a simulated core is `Iterations × 10⁶ / Total ticks`, and the port prints
+it directly. The testbench also reports mispredicts and stall cycles at the
+end of every run.
+
 ## Status and next steps
 
-- [x] RV32I pipeline: forwarding, load-use stall, BTB/2-bit prediction
+- [x] RV32I pipeline: forwarding, load-use stall
+- [x] Branch prediction: predecoded direct targets, gshare with speculative
+  history and checkpoint repair, return address stack, indirect BTB
 - [x] Zicsr, `ecall`/`ebreak`/illegal traps, `mret`, timer interrupt, `fence.i`
 - [x] Precise misaligned load/store/fetch exceptions with `mtval`
 - [x] Directed smoke test passes on Icarus and Verilator
@@ -98,7 +127,7 @@ CoreMark/MHz = `Iterations × 10⁶ / Total ticks` (the port prints it ×1000).
 - [x] Self-checking C tests: RV32M against software references, timer
   interrupts mid-workload (including mid-divide), recursion and jump tables
 - [ ] RISCOF `rv32i_m/I` passing
-- [ ] CoreMark score
+- [x] CoreMark: 3.26 CoreMark/MHz (see Performance)
 - [ ] FreeRTOS boot (see `sw/freertos/README.md`)
 - [ ] Synchronous BRAM fetch path for FPGA (RAM reads are combinational now)
 

@@ -44,6 +44,9 @@ module tb_top;
     reg [63:0]   max_cycles;
     reg          trace_en, has_tohost, has_sig;
     reg [63:0]   cycle;
+
+    // Pipeline event counters, reported at the end of the run.
+    reg [63:0]   n_cf, n_mispredict, n_load_use, n_div_stall;
     integer      fd, i;
 
     initial begin
@@ -84,6 +87,8 @@ module tb_top;
             $display("[tb] cycles=%0d instret=%0d", cycle, instret);
             if (instret != 0)
                 $display("[tb] CPI=%0d.%03d", cycle / instret, ((cycle * 1000) / instret) % 1000);
+            $display("[tb] branches/jumps=%0d mispredicts=%0d load-use stalls=%0d divide stall cycles=%0d",
+                     n_cf, n_mispredict, n_load_use, n_div_stall);
             if (pass) $display("[tb] PASS");
             else      $display("[tb] FAIL (code=%0d)", code);
             $finish;
@@ -103,9 +108,19 @@ module tb_top;
     // ------------------------------------------------------------------ monitors
     always @(posedge clk) begin
         if (rst) begin
-            cycle <= 0;
+            cycle        <= 0;
+            n_cf         <= 0;
+            n_mispredict <= 0;
+            n_load_use   <= 0;
+            n_div_stall  <= 0;
         end else begin
             cycle <= cycle + 1;
+            if (dut.u_core.ex_valid && !dut.u_core.ex_busy && !dut.u_core.ex_trap) begin
+                if (dut.u_core.ex_is_cf)      n_cf         <= n_cf + 1;
+                if (dut.u_core.ex_mispredict) n_mispredict <= n_mispredict + 1;
+            end
+            if (dut.u_core.u_hazard.load_use) n_load_use  <= n_load_use + 1;
+            if (dut.u_core.ex_busy)           n_div_stall <= n_div_stall + 1;
 
             if (cycle >= max_cycles) begin
                 $display("\n[tb] TIMEOUT after %0d cycles", cycle);
