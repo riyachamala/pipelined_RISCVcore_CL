@@ -59,6 +59,8 @@ make smoke TRACE=1            # print every retired instruction
 make lint                     # Verilator lint
 
 make hello                    # C hello world + fib, prints cycles/instret
+make sw-tests                 # self-checking C tests: muldiv, irq, sort
+make test                     # smoke + riscv-tests + sw-tests
 make run ELF=path/to/prog.elf # any bare-metal ELF linked at 0x80000000
 make riscv-tests              # rv32ui/um/mi -p- tests from the official repo
 SUITES=rv32ui make riscv-tests
@@ -93,6 +95,8 @@ CoreMark/MHz = `Iterations × 10⁶ / Total ticks` (the port prints it ×1000).
 - [x] riscv-tests: `rv32ui-p-*` 41/41, `rv32um-p-*` 8/8, `rv32mi-p-*` 15/15 passing
   (only `ma_data` and `pmpaddr` are skipped; they need optional features)
 - [x] Compiled C runs (`make hello`)
+- [x] Self-checking C tests: RV32M against software references, timer
+  interrupts mid-workload (including mid-divide), recursion and jump tables
 - [ ] RISCOF `rv32i_m/I` passing
 - [ ] CoreMark score
 - [ ] FreeRTOS boot (see `sw/freertos/README.md`)

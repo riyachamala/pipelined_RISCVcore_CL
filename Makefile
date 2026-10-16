@@ -4,6 +4,8 @@
 #   make smoke                   directed pipeline test (no RISC-V toolchain needed)
 #   make run ELF=prog.elf        run any ELF on the SoC
 #   make hello                   build + run sw/hello (needs riscv gcc)
+#   make sw-tests                self-checking C tests (sw/tests)
+#   make test                    smoke + riscv-tests + sw-tests
 #   make riscv-tests             official riscv-tests (rv32ui-p-*)
 #   make riscof                  RISCOF architectural compliance
 #   make coremark                build + run CoreMark
@@ -41,7 +43,7 @@ endif
 
 export SIM SIM_RUN PYTHON BUILD
 
-.PHONY: all sim lint smoke run hello coremark riscv-tests riscof clean
+.PHONY: all sim lint smoke run hello sw-tests test coremark riscv-tests riscof clean
 
 all: smoke
 
@@ -73,6 +75,11 @@ hello: $(SIM_BIN)
 	$(MAKE) -C sw/hello
 	scripts/run_elf.sh sw/hello/build/hello.elf $(PLUSARGS)
 
+sw-tests: $(SIM_BIN)
+	$(MAKE) -C sw/tests run
+
+test: smoke riscv-tests sw-tests
+
 coremark: $(SIM_BIN)
 	$(MAKE) -C sw/coremark
 	scripts/run_elf.sh sw/coremark/build/coremark.elf +max_cycles=200000000
@@ -86,4 +93,5 @@ riscof: $(SIM_BIN)
 clean:
 	rm -rf $(BUILD) tb_top.vcd
 	$(MAKE) -C sw/hello clean
+	$(MAKE) -C sw/tests clean
 	$(MAKE) -C sw/coremark clean
