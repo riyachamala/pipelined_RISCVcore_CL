@@ -42,9 +42,10 @@ RISCOF compliance, and CoreMark.
 ## Prerequisites
 
 - `iverilog` (≥ 11) and/or `verilator` (≥ 5), plus `python3`
-- For C, riscv-tests, and CoreMark: a RISC-V GCC (`riscv64-unknown-elf-gcc` by
-  default; override with `CROSS=riscv32-unknown-elf-` and so on). On macOS:
-  `brew tap riscv-software-src/riscv && brew install riscv-tools`
+- For C, riscv-tests, and CoreMark: a RISC-V GCC. `scripts/install_toolchain.sh`
+  downloads a prebuilt xPack `riscv-none-elf-gcc` into `./tools`, and the build
+  finds it automatically. Any `riscv64-unknown-elf-` or similar compiler on `PATH`
+  also works; force one with `CROSS=<prefix>`.
 - For RISCOF: `pip install riscof` and `spike` on `PATH`
 
 ## Usage
@@ -85,7 +86,8 @@ CoreMark/MHz = `Iterations × 10⁶ / Total ticks` (the port prints it ×1000).
 - [x] RV32I pipeline: forwarding, load-use stall, BTB/2-bit prediction
 - [x] Zicsr, `ecall`/`ebreak`/illegal traps, `mret`, timer interrupt, `fence.i`
 - [x] Directed smoke test passes on Icarus and Verilator
-- [ ] riscv-tests `rv32ui-p-*` all passing (needs a cross-compiler to run)
+- [x] riscv-tests `rv32ui-p-*`: 41/41 passing
+- [x] Compiled C runs (`make hello`)
 - [ ] RISCOF `rv32i_m/I` passing
 - [ ] CoreMark score
 - [ ] RV32M (hook marked `TODO(RV32M)` in `rtl/rv_decoder.v`)

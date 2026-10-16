@@ -5,11 +5,11 @@
 #   SUITES="rv32ui rv32mi" tests/riscv-tests/run.sh
 #   tests/riscv-tests/run.sh add lw          # selected tests only
 #
-# Env: CROSS (default riscv64-unknown-elf-), SIM, RISCV_TESTS_DIR
+# Env: CROSS (auto-detected by scripts/find_cross.sh), SIM, RISCV_TESTS_DIR
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-CROSS="${CROSS:-riscv64-unknown-elf-}"
+CROSS="$("$ROOT/scripts/find_cross.sh")" || exit 1
 SUITES="${SUITES:-rv32ui}"
 RT_DIR="${RISCV_TESTS_DIR:-$ROOT/build/riscv-tests/src}"
 OUT="$ROOT/build/riscv-tests"

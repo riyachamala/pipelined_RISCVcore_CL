@@ -6,3 +6,4 @@ sw/coremark/coremark-src/
 tests/riscof/riscv-arch-test/
 tests/riscof/spike/
 tests/riscof/riscof_work/
+tools/

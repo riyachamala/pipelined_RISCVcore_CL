@@ -5,11 +5,6 @@
 #     SRCS := main.c
 #     include ../common/common.mk
 
-CROSS   ?= riscv64-unknown-elf-
-CC      := $(CROSS)gcc
-OBJDUMP := $(CROSS)objdump
-PYTHON  ?= python3
-
 ARCH    ?= rv32i_zicsr_zifencei
 ABI     ?= ilp32
 OPT     ?= -O2
@@ -17,6 +12,11 @@ OPT     ?= -O2
 COMMON_DIR := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 ROOT_DIR   := $(abspath $(COMMON_DIR)/../..)
 BUILD_DIR  ?= build
+
+CROSS   ?= $(shell $(ROOT_DIR)/scripts/find_cross.sh)
+CC      := $(CROSS)gcc
+OBJDUMP := $(CROSS)objdump
+PYTHON  ?= python3
 
 CFLAGS  += -march=$(ARCH) -mabi=$(ABI) -mcmodel=medany $(OPT) -g \
            -ffreestanding -fno-builtin -ffunction-sections -fdata-sections \
