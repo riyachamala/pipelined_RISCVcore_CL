@@ -21,7 +21,8 @@ PYTHON  ?= python3
 CFLAGS  += -march=$(ARCH) -mabi=$(ABI) -mcmodel=medany $(OPT) -g \
            -ffreestanding -fno-builtin -ffunction-sections -fdata-sections \
            -Wall -I$(COMMON_DIR)
-LDFLAGS += -T $(COMMON_DIR)/link.ld -nostartfiles -nostdlib -static -Wl,--gc-sections
+LDFLAGS += -T $(COMMON_DIR)/link.ld -nostartfiles -nostdlib -static -Wl,--gc-sections \
+           -Wl,--no-warn-rwx-segments
 LIBS    += -lgcc
 
 ALL_SRCS := $(COMMON_DIR)/crt0.S $(COMMON_DIR)/runtime.c $(SRCS)

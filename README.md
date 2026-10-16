@@ -66,6 +66,7 @@ make run ELF=path/to/prog.elf # any bare-metal ELF linked at 0x80000000
 make riscv-tests              # rv32ui/um/mi -p- tests from the official repo
 SUITES=rv32ui make riscv-tests
 make coremark SIM=verilator   # CoreMark (ITERATIONS=10 by default)
+make freertos                 # boot FreeRTOS V11 with a multi-task demo
 
 make arch-test                # riscv-arch-test vs golden reference signatures
 cd tests/riscof && make setup && make   # RISCOF flow (needs spike)
@@ -131,7 +132,8 @@ end of every run.
 - [x] Architectural compliance (riscv-arch-test 2.7.4 golden signatures):
   I 38/38, M 8/8, Zifencei 1/1, privilege 5/5 applicable
 - [x] CoreMark: 3.26 CoreMark/MHz (see Performance)
-- [ ] FreeRTOS boot (see `sw/freertos/README.md`)
+- [x] Boots FreeRTOS V11.3.2: tick interrupts, delays, blocking queues,
+  semaphores, and preemptive time slicing all checked by `sw/freertos/main.c`
 - [ ] Synchronous BRAM fetch path for FPGA (RAM reads are combinational now)
 
 Known simplifications: misaligned accesses trap rather than being handled in

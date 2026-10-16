@@ -18,6 +18,9 @@ else
     SIM_CMD=(vvp -n "$ROOT/build/iverilog/sim.vvp")
 fi
 
+# Rebuild the simulator if the RTL or testbench changed (no-op otherwise).
+make -s -C "$ROOT" sim SIM="$SIM" > /dev/null
+
 "$PYTHON" "$ROOT/scripts/elf2hex.py" "$ELF" "$HEX"
 
 ARGS=("+hex=$HEX")
